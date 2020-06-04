@@ -5,17 +5,21 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"strings"
+
 	"github.com/Rhymen/go-whatsapp/binary"
 	"github.com/Rhymen/go-whatsapp/crypto/cbc"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
-	"io"
-	"io/ioutil"
-	"strings"
 )
 
 func (wac *Conn) readPump() {
-	defer wac.wg.Done()
+	defer func() {
+		wac.wg.Done()
+		_, _ = wac.Disconnect()
+	}()
 
 	var readErr error
 	var msgType int
@@ -24,14 +28,15 @@ func (wac *Conn) readPump() {
 	for {
 		readerFound := make(chan struct{})
 		go func() {
-			msgType, reader, readErr = wac.ws.conn.NextReader()
+			if wac.ws != nil {
+				msgType, reader, readErr = wac.ws.conn.NextReader()
+			}
 			close(readerFound)
 		}()
 		select {
 		case <-readerFound:
 			if readErr != nil {
 				wac.handle(&ErrConnectionFailed{Err: readErr})
-				_, _ = wac.Disconnect()
 				return
 			}
 			msg, err := ioutil.ReadAll(reader)

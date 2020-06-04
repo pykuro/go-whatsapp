@@ -90,9 +90,12 @@ type Conn struct {
 
 	longClientName  string
 	shortClientName string
+	clientVersion   string
 
 	loginSessionLock sync.RWMutex
 	Proxy            func(*http.Request) (*url.URL, error)
+
+	writerLock sync.RWMutex
 }
 
 type websocketWrapper struct {
@@ -119,6 +122,7 @@ func NewConn(timeout time.Duration) (*Conn, error) {
 
 		longClientName:  "github.com/rhymen/go-whatsapp",
 		shortClientName: "go-whatsapp",
+		clientVersion:   "0.1.0",
 	}
 	return wac, wac.connect()
 }
@@ -133,6 +137,7 @@ func NewConnWithProxy(timeout time.Duration, proxy func(*http.Request) (*url.URL
 
 		longClientName:  "github.com/rhymen/go-whatsapp",
 		shortClientName: "go-whatsapp",
+		clientVersion:   "0.1.0",
 		Proxy:           proxy,
 	}
 	return wac, wac.connect()
@@ -151,8 +156,8 @@ func (wac *Conn) connect() (err error) {
 	}()
 
 	dialer := &websocket.Dialer{
-		ReadBufferSize:   25 * 1024 * 1024,
-		WriteBufferSize:  10 * 1024 * 1024,
+		ReadBufferSize:   0,
+		WriteBufferSize:  0,
 		HandshakeTimeout: wac.msgTimeout,
 		Proxy:            wac.Proxy,
 	}
